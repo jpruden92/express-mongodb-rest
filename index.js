@@ -312,13 +312,20 @@ module.exports = function(options) {
 	}
 	
 	// (mongodb) Connect to mongodb using connection pooling
-	var Client;
-	mongoClient.connect(options.mongodb.connection, options.mongodb.options, function(err, client) {
-		Client = client;
-	});
+	let Client;
+
+	const _connect = async () => {
+		return new Promise((resolve, reject) => {
+			mongoClient.connect(options.mongodb.connection, options.mongodb.options, function(err, client) {
+				if (err) return reject(err);
+				Client = client;
+				resolve();
+			});
+		});
+	};
 	
 	// (middleware) Express middleware function 
-	var middleware = function(req, res, next) {
+	const middleware = async (req, res, next) => {
 		
 		// (middleware_options) Setup REST 
 		var rest = options.rest[req.method];
@@ -345,6 +352,9 @@ module.exports = function(options) {
 			var data = {};
 			data.rest = rest;
 			data.mongodb = {};
+
+			if (!Client) await _connect();
+
 			data.mongodb.client = Client;
 			data.mongodb.database = data.mongodb.client.db(rest.database);
 			data.mongodb.collection = data.mongodb.database.collection(rest.collection);
